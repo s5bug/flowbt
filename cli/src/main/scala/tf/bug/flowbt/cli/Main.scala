@@ -27,7 +27,7 @@ object Main extends CommandIOApp("flowbt", "Flowgram Build Tool") {
   }
 
   def program[F[_]](buildSheet: Path, generatedFolder: Path)(implicit sync: Sync[F], scribe: Scribe[F]): F[ExitCode] = for {
-    _ <- scribe.trace(s"Entered program(buildSheet = $buildSheet, generatedFolder = $generatedFolder)")
+    _ <- scribe.trace(s"ENTER program(buildSheet = $buildSheet, generatedFolder = $generatedFolder)")
     ec <- sync.delay(Paths.get(".")).map(_.toAbsolutePath).flatMap { absoluteCwd =>
       val absoluteBuildSheet = buildSheet.toAbsolutePath
       val buildSheetHere = absoluteBuildSheet.startsWith(absoluteCwd)
@@ -49,6 +49,6 @@ object Main extends CommandIOApp("flowbt", "Flowgram Build Tool") {
         errorStrings.traverse_(scribe.error(_)).as(ExitCode.Error)
       }
     }
-    _ <- scribe.trace(s"Exited program(buildSheet = $buildSheet, generatedFolder = $generatedFolder)")
+    _ <- scribe.trace(s"LEAVE program(buildSheet = $buildSheet, generatedFolder = $generatedFolder)")
   } yield ec
 }
