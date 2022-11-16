@@ -14,7 +14,7 @@ lazy val core = (project in file("core")).settings(
 
 lazy val cli = (project in file("cli")).settings(
   organization := "tf.bug",
-  name := "flowbt",
+  name := "flowbt-cli",
   version := "0.1.0",
   scalaVersion := "2.13.10",
   libraryDependencies ++= Seq(

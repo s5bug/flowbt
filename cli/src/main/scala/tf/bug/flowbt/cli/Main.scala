@@ -26,19 +26,20 @@ object Main extends CommandIOApp("flowbt", "Flowgram Build Tool") {
     }
   }
 
-  def program[F[_]](buildSheet: Path, generatedFolder: Path)(implicit sync: Sync[F], scribe: Scribe[F]): F[ExitCode] = {
-    sync.delay(Paths.get(".")).map(_.toAbsolutePath).flatMap { absoluteCwd =>
+  def program[F[_]](buildSheet: Path, generatedFolder: Path)(implicit sync: Sync[F], scribe: Scribe[F]): F[ExitCode] = for {
+    _ <- scribe.trace(s"Entered program(buildSheet = $buildSheet, generatedFolder = $generatedFolder)")
+    ec <- sync.delay(Paths.get(".")).map(_.toAbsolutePath).flatMap { absoluteCwd =>
       val absoluteBuildSheet = buildSheet.toAbsolutePath
       val buildSheetHere = absoluteBuildSheet.startsWith(absoluteCwd)
       val absoluteGeneratedFolder = generatedFolder.toAbsolutePath
       val generatedFolderHere = absoluteGeneratedFolder.startsWith(absoluteCwd)
 
-      scribe.trace(s"Starting flowbt")
-      scribe.trace(s"CWD: $absoluteCwd")
-      scribe.trace(s"Build Sheet: $absoluteBuildSheet")
-      scribe.trace(s"Generated Folder: $absoluteGeneratedFolder")
+      scribe.debug(s"Starting flowbt")
+      scribe.debug(s"CWD: $absoluteCwd")
+      scribe.debug(s"Build Sheet: $absoluteBuildSheet")
+      scribe.debug(s"Generated Folder: $absoluteGeneratedFolder")
 
-      if(buildSheetHere && generatedFolderHere) {
+      if (buildSheetHere && generatedFolderHere) {
         sync.pure(ExitCode.Success)
       } else {
         val errorStrings = List(
@@ -48,5 +49,6 @@ object Main extends CommandIOApp("flowbt", "Flowgram Build Tool") {
         errorStrings.traverse_(scribe.error(_)).as(ExitCode.Error)
       }
     }
-  }
+    _ <- scribe.trace(s"Exited program(buildSheet = $buildSheet, generatedFolder = $generatedFolder)")
+  } yield ec
 }
