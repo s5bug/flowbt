@@ -3,6 +3,7 @@ package tf.bug.flowbt.cli
 import cats.effect._
 import cats.syntax.all._
 import com.monovore.decline.{Command, Opts}
+import fs2.io.file.Files
 import java.nio.file.{Path, Paths}
 import scribe.{Level, Logger, Scribe}
 import scribe.cats._
@@ -39,7 +40,7 @@ object Main extends IOApp {
     (buildSheet, generatedFolder, verbose).mapN(Arguments)
   }
 
-  def program[F[_]](buildSheet: Path, generatedFolder: Path)(implicit sync: Sync[F], scribe: Scribe[F]): F[ExitCode] = for {
+  def program[F[_]](buildSheet: Path, generatedFolder: Path)(implicit sync: Sync[F], scribe: Scribe[F], files: Files[F]): F[ExitCode] = for {
     _ <- scribe.trace(s"ENTER program(buildSheet = $buildSheet, generatedFolder = $generatedFolder)")
     ec <- sync.delay(Paths.get(".")).map(_.toAbsolutePath.normalize()).flatMap { absoluteCwd =>
       val absoluteBuildSheet = buildSheet.toAbsolutePath.normalize()
@@ -56,7 +57,7 @@ object Main extends IOApp {
 
       contextLogs.flatMap { _ =>
         if (buildSheetHere && generatedFolderHere) {
-          sync.pure(ExitCode.Success)
+          runBuild[F](absoluteCwd, buildSheet, generatedFolder)
         } else {
           val errorStrings = List(
             Option.when(!buildSheetHere)("Build sheet not beneath current working directory."),
@@ -68,4 +69,13 @@ object Main extends IOApp {
     }
     _ <- scribe.trace(s"LEAVE program(buildSheet = $buildSheet, generatedFolder = $generatedFolder)")
   } yield ec
+
+  def runBuild[F[_]](absoluteCwd: Path, buildSheet: Path, generatedFolder: Path)(implicit sync: Sync[F], scribe: Scribe[F], files: Files[F]): F[Unit] = {
+    val cache = FileCache[F](buildSheet, absoluteCwd.resolve(Paths.get(".flowbt", "cache")))
+
+    cache.buildSheetChanged.flatMap {
+      case false => scribe.info("Build sheet unchanged. Reading assets...")
+      case true => scribe.info("Build sheet changed.")
+    }
+  }
 }
